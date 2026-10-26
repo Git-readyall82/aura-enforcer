@@ -1,90 +1,101 @@
-# Discover Sweden
+# Aura Enforcer: Reverse Engineer a Result (APL-project 2026)
 
-An AI-powered web app for exploring Sweden: places, scientists, inventors, food, traditions, brands and music.
-Ask the AI guide a question and it answers in a few sentences, then shows related cards with a short
-Wikipedia text, a picture and a link.
+**Author:** Fady Soweha
+**Track chosen:** API (FastAPI backend + HTML/CSS/JavaScript front end)
 
-**Live demo:** http://13.220.103.5/ (plain HTTP; the address changes if the server is stopped and started)
+## Project purpose
+I was given a screen recording of a finished application called **Aura** (`Aura.mp4`). The task was to work backwards: figure out what code could have produced it, then build a similar application, run it locally, and document the process.
 
-## How it works
+Aura is a landing page for a fictional accessibility tool. It has a persona dropdown, a *Simulate / Stop Enforcement* button, a *Clarify Content* toggle and a status card.
 
+## Screenshots
+| Enforcing, The Voyager | Enforcing, The Beacon |
+|---|---|
+| ![Blue](screenshots/enforcing-blue.png) | ![Yellow](screenshots/enforcing-yellow.png) |
+
+| Clarify Content on, enforcement stopped | API documentation (/docs) |
+|---|---|
+| ![Clarify](screenshots/clarify-idle.png) | ![Docs](screenshots/api-docs.png) |
+
+## Phase 1: Research (pre-study)
+**What I did**
+- Watched the recording and noted everything that happens when I click each control.
+- Read the address bar in the video: `.../aura/static/index.html`. A `static` folder suggests a small backend that serves static files.
+- Used GenAI (Claude) to help analyse frames of the video and to ask questions: what kind of page is this, what could create the labels and outlines, what data does the status card show?
+- Chose the tools: **Python + FastAPI** for the backend (automatic API docs, little code) and plain **HTML/CSS/JavaScript** for the front end.
+
+**Reverse engineering (steps from the brief)**
+- *Inputs:* selected persona, click on Simulate/Stop, Clarify Content toggle.
+- *Process:* JavaScript marks elements with `data-aura`, adds an outline and a small label to each, a body class switches the colour theme, and the text is swapped between a normal and a simple version.
+- *Fake functions I sketched:* `startEnforcement()`, `stopEnforcement()`, `setPersona()`, `toggleClarify()`.
+
+**Problems and solutions**
+- *Problem:* I could not see the code, only the result. *Solution:* I treated the page like a detective case: listed every visible behaviour and guessed the simplest logic that explains it.
+
+## Phase 2: Implementation
+**Project structure**
 ```
-Browser -> nginx (port 80) -> gunicorn (127.0.0.1:5000) -> Flask app (app.py)
-                                                              |-> Amazon Bedrock (Claude Haiku 4.5)
-                                                              |-> Wikipedia REST API (cards)
+aura/
+├── main.py            # FastAPI backend
+├── requirements.txt   # fastapi, uvicorn
+├── README.md
+├── screenshots/
+└── static/
+    └── index.html     # page, CSS and JavaScript
 ```
+**Order of work**
+1. Backend with an in-memory state: `scanning`, `fixes`, `mode`, `persona`.
+2. Endpoints: `GET /api/status`, `GET /api/personas`, `POST /api/enforce`, `POST /api/stop`, and `GET /` for the page.
+3. Static page with the layout, dark theme and the three cards.
+4. JavaScript: tagging elements, theme switching, Clarify Content and the calls to the API.
 
-- **The AI is the core of the app.** `POST /api/ask` sends the question to Claude on Amazon Bedrock.
-- **The AI does not invent the cards.** It is given a curated catalogue of 45 entries (`data/entries.json`) and
-  can only choose entries from that list. The picture, text and link on each card come from Wikipedia, so
-  the links are real.
-- **Seven categories:** Places, Scientists, Inventors, Food & drinks, Traditions & culture, Brands, Singers & bands.
-- The web page (`static/index.html`) lets you browse and filter all entries and read more about each one.
+**Problems and solutions**
+- *Problem:* `uvicorn: command not found` and `No module named uvicorn`. *Solution:* the installed packages were wrong. `pip install -r requirements.txt` installed Flask, which meant `requirements.txt` was an old file with the same name from my Downloads folder. I rewrote it with `fastapi` and `uvicorn` and installed again.
+- *Problem:* the page had no `data-aura` attributes. *Solution:* `index.html` was also an old file. I checked it with `grep -c "data-aura"` (it returned 0), then replaced it.
+- *Problem:* pip and venv were missing in WSL. *Solution:* `sudo apt install python3-venv python3-pip`, then a fresh virtual environment.
 
-## Endpoints
+## Phase 3: Completion
+**Testing**
+- Simulate adds outlines and labels, and the button changes to *Stop Enforcement*.
+- Persona switch changes the theme from blue to yellow.
+- Clarify Content swaps the headline and the paragraph.
+- Stop removes all overlays and sets the mode back to `IDLE`.
+- `/docs` lists every endpoint and lets me try them.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/` | The web page |
-| GET | `/api/entries` | List of all entries (id, name, category) |
-| GET | `/api/card/<id>` | Details for one entry (Wikipedia text, picture, link) |
-| POST | `/api/ask` | JSON `{"question": "..."}` (max 500 characters); returns an answer and up to 4 cards |
+**Improvements**
+- *Problem:* the "UI ELEMENT" label wrapped onto two lines and covered the logo. *Solution:* added `white-space: nowrap` to the label style.
+- *Problem:* the status card showed 16 tagged elements in my first estimate. *Solution:* the page really has 12 tagged elements, which also matches the original video, so I trust the count from the app itself.
 
-## Project structure
+## Phase 4: Summary of problems and solutions
+| Problem | Solution |
+|---|---|
+| Could not see the original code | Worked backwards from behaviour: inputs, process, sketch |
+| Wrong `requirements.txt` (Flask) | Rewrote it with `fastapi` and `uvicorn` |
+| Old `index.html` in the project | Checked with `grep`, replaced the file |
+| pip/venv missing in WSL | Installed `python3-venv` and `python3-pip` |
+| Label covering the logo | `white-space: nowrap` on the label |
+| Commands failed when I copied the prompt text | Copy only the command, not `(venv) user@host:~$` |
 
-```
-app.py              Flask backend (Bedrock call, Wikipedia cards, rate limit)
-data/entries.json   Curated catalogue of 45 entries
-static/index.html   Front end (HTML, CSS and JavaScript in one file)
-check_titles.py     Helper that checks every Wikipedia title in entries.json
-requirements.txt    Python packages
-```
-
-## Run locally
-
-You need Python 3.12 or newer and AWS credentials that are allowed to call the Claude model in Amazon
-Bedrock (region `eu-north-1`). A new AWS account must first submit the Anthropic use case form in the
-Bedrock console.
-
+## How to run
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
-python app.py
+python -m uvicorn main:app --reload
 ```
+Open http://localhost:8000 (API docs at http://localhost:8000/docs).
 
-Then open http://127.0.0.1:5000/. The model is set in `app.py` (`MODEL_ID`).
+## API
+| Method | Path | Description |
+|---|---|---|
+| GET | /api/status | current state |
+| GET | /api/personas | available personas |
+| POST | /api/enforce | start enforcement `{persona, fixes}` |
+| POST | /api/stop | stop enforcement |
 
-## Deploy on AWS EC2 (overview)
+## Conclusion
+**What I achieved:** a working local application that behaves like the original Aura recording: persona themes, enforcement overlay with labels, Clarify Content and a live status card from a FastAPI backend.
 
-1. Launch an Ubuntu EC2 instance and open port 80 in its security group.
-2. Attach an IAM role to the instance that allows only `bedrock:InvokeModel` for the model.
-   No AWS keys are stored on the server.
-3. Install nginx and Python, create a virtual environment, and run `pip install -r requirements.txt`.
-4. Run the app with systemd:
-   `gunicorn --workers 1 --threads 4 --bind 127.0.0.1:5000 app:app`
-5. Let nginx forward port 80 to gunicorn. Overwrite the client address header so the rate limit cannot be faked:
+**What I learned:** how to reverse engineer an application from its behaviour, how a front end and an API communicate, how to use GenAI as a helper while checking its output myself, and how to debug a real setup (virtual environments, wrong files, missing packages).
 
-```nginx
-location / {
-    proxy_pass http://127.0.0.1:5000;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $remote_addr;
-    proxy_set_header X-Forwarded-Proto $scheme;
-}
-```
-
-## Security and cost
-
-- No secrets are in this repository. `.gitignore` excludes `.env`, `*.pem`, `*.log` and the virtual environment.
-- Every question to the AI costs a little, so `/api/ask` allows 20 questions per 10 minutes per visitor.
-  The counter is kept in memory and is shared because the app runs with one gunicorn worker.
-  It resets when the service restarts.
-
-## Limitations
-
-- The site uses plain HTTP, without HTTPS.
-- AI answers can contain mistakes. Check the Wikipedia link on each card.
-- A few Wikipedia pages have no picture (for example Nils Bohlin), so their cards show text and a link only.
-- The server address changes if the EC2 instance is stopped and started, unless an Elastic IP is attached.
+**What could be improved:** the fonts and glow effects are simpler than the original; the tagging is simulated rather than scanning a real application; the state is only in memory, so it resets when the server restarts; and the layout could be tested on more screen sizes.
