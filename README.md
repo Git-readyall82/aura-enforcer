@@ -1,6 +1,5 @@
 # Aura Enforcer: Reverse Engineer a Result (APL-project 2026)
 
-**Author:** Fady Soweha
 **Track chosen:** API (FastAPI backend + HTML/CSS/JavaScript front end)
 
 ## Project purpose
