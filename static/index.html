@@ -5,15 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aura Enforcer</title>
 <style>
-  :root { --accent:#3b82f6; --bg:#050a1a; --text:#f1f5f9; --muted:#94a3b8; }
+  :root { --accent:#3b82f6; --bg:#050a1a; --text:#f1f5f9; --muted:#94a3b8; --glow:#0b1b4a; }
   body.beacon { --accent:#fbbf24; }
+  body.guardian { --accent:#34d399; --bg:#08120d; --glow:#12301f; --text:#ece8d9; --muted:#bdb9a6; }
   * { box-sizing:border-box; }
-  body { margin:0; font-family:system-ui,Segoe UI,sans-serif; background:radial-gradient(circle at 80% 40%,#0b1b4a 0,var(--bg) 55%); color:var(--text); min-height:100vh; }
+  body { margin:0; font-family:system-ui,Segoe UI,sans-serif; background:radial-gradient(circle at 80% 40%,var(--glow) 0,var(--bg) 55%); color:var(--text); min-height:100vh; }
   nav { display:flex; align-items:center; gap:12px; padding:20px 40px; }
   .logo { font-weight:800; letter-spacing:2px; color:#818cf8; font-size:1.4rem; margin-right:auto; }
   select, button, .toggle { background:#0f1a3a; color:var(--text); border:1px solid #1e2a55; border-radius:10px; padding:10px 16px; font:inherit; cursor:pointer; }
   button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
-  body.beacon button.primary { color:#111; }
+  body.beacon button.primary, body.guardian button.primary { color:#111; }
   main { display:flex; flex-wrap:wrap; gap:40px; padding:40px; align-items:center; }
   .hero { flex:1 1 420px; }
   .badge { display:inline-block; padding:6px 14px; border:1px solid #1e2a55; border-radius:999px; color:var(--accent); font-size:.8rem; margin-bottom:20px; }
@@ -32,7 +33,7 @@
 
   .aura-on [data-aura] { outline:2px solid var(--accent); outline-offset:4px; position:relative; border-radius:8px; }
   .aura-on [data-aura] .aura-tag { white-space:nowrap; position:absolute; top:-12px; left:0; background:var(--accent); color:#fff; font:700 9px/1 system-ui; text-transform:uppercase; padding:3px 6px; border-radius:4px; z-index:5; }
-  body.beacon.aura-on [data-aura] .aura-tag { color:#111; }
+  body.beacon.aura-on [data-aura] .aura-tag, body.guardian.aura-on [data-aura] .aura-tag { color:#111; }
   body.beacon.aura-on { --text:#ffffff; --muted:#e2e8f0; }
   .aura-tag { display:none; }
   .aura-on .aura-tag { display:block; }
@@ -42,7 +43,8 @@
 <nav>
   <div class="logo" data-aura="UI Element">AURA</div>
   <select id="persona" data-aura="Interaction">
-    <option value="voyager">The Voyager (Color Blind)</option>
+    <option value="guardian">The Guardian (Eye Strain)</option>
+    <option value="voyager" selected>The Voyager (Color Blind)</option>
     <option value="beacon">The Beacon (Low Vision)</option>
   </select>
   <button id="toggleBtn" class="primary" data-aura="Interaction">Simulate Aura Enforcer</button>
@@ -112,9 +114,14 @@ function removeTags() {
   document.querySelectorAll(".aura-tag").forEach((t) => t.remove());
 }
 
+function setTheme(persona) {
+  document.body.classList.remove("beacon", "guardian");
+  if (persona !== "voyager") document.body.classList.add(persona);
+}
+
 async function startEnforcement() {
   const persona = $("persona").value;
-  document.body.classList.toggle("beacon", persona === "beacon");
+  setTheme(persona);
   document.body.classList.add("aura-on");
   const count = addTags();
   renderStatus(await api("/api/enforce", "POST", { persona, fixes: count }));
@@ -133,6 +140,7 @@ async function stopEnforcement() {
 $("toggleBtn").addEventListener("click", () => (enforcing ? stopEnforcement() : startEnforcement()));
 
 $("persona").addEventListener("change", () => {
+  setTheme($("persona").value);
   if (enforcing) startEnforcement();
 });
 

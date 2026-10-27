@@ -9,6 +9,7 @@ app = FastAPI(title="Aura Enforcer API", version="0.1")
 state = {"scanning": "Notepad.exe", "fixes": 12, "mode": "IDLE", "persona": "voyager"}
 
 PERSONAS = {
+    "guardian": {"label": "The Guardian (Eye Strain)", "accent": "#34d399"},
     "voyager": {"label": "The Voyager (Color Blind)", "accent": "#3b82f6"},
     "beacon": {"label": "The Beacon (Low Vision)", "accent": "#fbbf24"},
 }
